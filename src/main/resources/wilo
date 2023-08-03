@@ -1,0 +1,532 @@
+#!/bin/bash
+
+####################################################################
+# BUILD INFORMATION
+####################################################################
+
+WILO_BUILD_NAME="@project.artifactId@"
+WILO_BUILD_VERSION="@project.version@"
+WILO_BUILD_DATE_TIME="@j3.var.buildDateTime@"
+
+####################################################################
+# DEFAULT CONFIGURATION
+####################################################################
+
+WILO_OUTPUT_TYPE=${WILO_OUTPUT_TYPE:-text}
+
+WILO_DATE_TIME_FORMAT=${WILO_DATE_TIME_FORMAT:-"iso8601utc"}
+
+WILO_GLOBAL_CONTEXT=${WILO_GLOBAL_CONTEXT:-}
+
+WILO_LEVEL_TRACE_LABEL=${WILO_LEVEL_TRACE_LABEL:-"TRACE"}
+WILO_LEVEL_DEBUG_LABEL=${WILO_LEVEL_DEBUG_LABEL:-"DEBUG"}
+WILO_LEVEL_INFO_LABEL=${WILO_LEVEL_INFO_LABEL:-"INFO"}
+WILO_LEVEL_WARN_LABEL=${WILO_LEVEL_WARN_LABEL:-"WARN"}
+WILO_LEVEL_ERROR_LABEL=${WILO_LEVEL_ERROR_LABEL:-"ERROR"}
+
+WILO_LEVEL_TRACE_COLOR=${WILO_LEVEL_TRACE_COLOR:-"\033[0;90m"}
+WILO_LEVEL_DEBUG_COLOR=${WILO_LEVEL_DEBUG_COLOR:-"\033[0;37m"}
+WILO_LEVEL_INFO_COLOR=${WILO_LEVEL_INFO_COLOR:-"\033[0;36m"}
+WILO_LEVEL_WARN_COLOR=${WILO_LEVEL_WARN_COLOR:-"\033[0;33m"}
+WILO_LEVEL_ERROR_COLOR=${WILO_LEVEL_ERROR_COLOR:-"\033[0;31m"}
+
+WILO_JSON_TIME_KEY=${WILO_JSON_TIME_KEY:-"time"}
+WILO_JSON_LEVEL_KEY=${WILO_JSON_LEVEL_KEY:-"level"}
+WILO_JSON_MESSAGE_KEY=${WILO_JSON_MESSAGE_KEY:-"message"}
+
+####################################################################
+# UTILITY FUNCTIONS
+####################################################################
+
+####################################################################
+# Prints the arguments to STDOUT.
+# Globals:
+#   None
+# Arguments:
+#   Multiple positionnal arguments to be written to STDOUT.
+# Outputs:
+#   Writes arguments to STDOUT
+####################################################################
+print_stdout() {
+  echo "$*"
+}
+
+####################################################################
+# Prints the arguments to STDOUT, accepting espace characters.
+# Globals:
+#   None
+# Arguments:
+#   Multiple positionnal arguments to be written to STDOUT.
+# Outputs:
+#   Writes arguments to STDOUT
+####################################################################
+print_stdout_esc() {
+  echo -e "$*"
+}
+
+####################################################################
+# Prints the arguments to STDERR.
+# Globals:
+#   None
+# Arguments:
+#   Multiple positionnal arguments to be written to STDERR.
+# Outputs:
+#   Writes arguments to STDERR
+####################################################################
+print_stderr() {
+  echo "$*" >&2
+}
+
+####################################################################
+# Prints the arguments to STDERR, accepting espace characters.
+# Globals:
+#   None
+# Arguments:
+#   Multiple positionnal arguments to be written to STDERR.
+# Outputs:
+#   Writes arguments to STDERR
+####################################################################
+print_stderr_esc() {
+  echo -e "$*" >&2
+}
+
+####################################################################
+# Prints the help/usage.
+# Globals:
+#   None
+# Arguments:
+#   None
+# Outputs:
+#   Writes help to STDERR
+####################################################################
+print_help() {
+    print_stderr "usage: wilo [--context=key1=value1[,key2=value2]] <level> <message>"
+}
+
+####################################################################
+# Get the current date time formatted in the provided format.
+# Globals:
+#   WILO_DATE_TIME_FORMAT
+# Arguments:
+#   None
+# Outputs:
+#   Writes formatted date time to stdout
+####################################################################
+normalize_date_time_now() {
+    local GNU_DATE_CMD_AVAILABLE
+    local GNU_DATE_CMD_NAME
+    local -r DATE_ISO8601_FORMAT="%Y-%m-%dT%H:%M:%S.%6N%:z"
+
+    if [ "$(uname)" = "Darwin" ]; then
+        if command -v gdate &> /dev/null; then
+            GNU_DATE_CMD_AVAILABLE=true
+            GNU_DATE_CMD_NAME="gdate"
+        else
+            GNU_DATE_CMD_AVAILABLE=false
+            GNU_DATE_CMD_NAME="date"
+        fi
+    else
+        GNU_DATE_CMD_AVAILABLE=true
+        GNU_DATE_CMD_NAME="date"
+    fi
+
+
+    # Execute function
+    case $WILO_DATE_TIME_FORMAT in
+        # ISO8601 format - UTC
+        iso8601utc | ISO8601UTC | ISO_8601_UTC )
+            if [ "$GNU_DATE_CMD_AVAILABLE" = "true" ]; then
+                "$GNU_DATE_CMD_NAME" -u +"$DATE_ISO8601_FORMAT"
+            else
+                date -u -Iseconds
+            fi
+            ;;
+
+        # ISO8601 format - current TZ
+        iso8601 | ISO8601 | ISO_8601 )
+            if [ "$GNU_DATE_CMD_AVAILABLE" = "true" ]; then
+                "$GNU_DATE_CMD_NAME" +"$DATE_ISO8601_FORMAT"
+            else
+                date -Iseconds
+            fi
+            ;;
+
+        # Timestamp
+        ts | TS | TIMESTAMP | UNIX_TIMESTAMP )
+            if [ "$GNU_DATE_CMD_AVAILABLE" = "true" ]; then
+                "$GNU_DATE_CMD_NAME" +"%s"
+            else
+                date +"%s"
+            fi
+            ;;
+
+        # Timestamp Millis
+        ts_milli | TS_MILLI | TIMESTAMP_MILLI | UNIX_TIMESTAMP_MILLI )
+            if [ "$GNU_DATE_CMD_AVAILABLE" = "true" ]; then
+                "$GNU_DATE_CMD_NAME" +"%s%3N"
+            else
+                date +"%s000"
+            fi
+            ;;
+
+        # Timestamp Micro
+        ts_micro | TS_MICRO | TIMESTAMP_MICRO | UNIX_TIMESTAMP_MICRO )
+            if [ "$GNU_DATE_CMD_AVAILABLE" = "true" ]; then
+                "$GNU_DATE_CMD_NAME" +"%s%6N"
+            else
+                date +"%s000000"
+            fi
+            ;;
+
+        *)
+            print_stderr "error: unsupported value '$WILO_DATE_TIME_FORMAT' for variable 'WILO_DATE_TIME_FORMAT'."
+            exit 1
+        ;;
+    esac
+}
+
+####################################################################
+# Normalize argument level to a set of supported value
+# Globals:
+#   WILO_LEVEL_TRACE_LABEL
+#   WILO_LEVEL_DEBUG_LABEL
+#   WILO_LEVEL_INFO_LABEL
+#   WILO_LEVEL_WARN_LABEL
+#   WILO_LEVEL_ERROR_LABEL
+# Arguments:
+#   Log level requested by the user
+# Outputs:
+#   Writes normalized log level to stdout
+####################################################################
+normalize_arg_level() {
+    local -r LOG_LEVEL=$1
+    case $LOG_LEVEL in
+        t | T | trace | Trace | TRACE )
+            echo "$WILO_LEVEL_TRACE_LABEL"
+            ;;
+        d | D | debug | Debug | DEBUG )
+            echo "$WILO_LEVEL_DEBUG_LABEL"
+            ;;
+        i | I | info | Info | INFO )
+            echo "$WILO_LEVEL_INFO_LABEL"
+            ;;
+        w | W | warn | Warn | WARN | warning | Warning | WARNING )
+            echo "$WILO_LEVEL_WARN_LABEL"
+            ;;
+        e | E | err | Err | ERR | error | Error | ERROR )
+            echo "$WILO_LEVEL_ERROR_LABEL"
+            ;;
+        *)
+            print_stderr "error: unsupported value '$LOG_LEVEL' for variable 'LOG_LEVEL'."
+            exit 1
+            ;;
+    esac
+}
+
+####################################################################
+# Normalize argument context to a JSON structure
+# Globals:
+#   WILO_GLOBAL_CONTEXT
+# Arguments:
+#   Local log context provided by the user
+# Outputs:
+#   Writes normalized context as JSON to stdout
+####################################################################
+normalize_arg_context() {
+    local -r LOG_CONTEXT=$1
+
+    local LOG_COMBINED_CONTEXTS_TXT=""
+
+    # add global context
+    if [ -n "$WILO_GLOBAL_CONTEXT" ]; then
+        if [ -n "$LOG_COMBINED_CONTEXTS_TXT" ]; then
+            LOG_COMBINED_CONTEXTS_TXT="$LOG_COMBINED_CONTEXTS_TXT,$WILO_GLOBAL_CONTEXT"
+        else
+            LOG_COMBINED_CONTEXTS_TXT="$WILO_GLOBAL_CONTEXT"
+        fi
+    fi
+
+    # add local context
+    if [ -n "$LOG_CONTEXT" ]; then
+        if [ -n "$LOG_COMBINED_CONTEXTS_TXT" ]; then
+            LOG_COMBINED_CONTEXTS_TXT="$LOG_COMBINED_CONTEXTS_TXT,$LOG_CONTEXT"
+        else
+            LOG_COMBINED_CONTEXTS_TXT="$LOG_CONTEXT"
+        fi
+    fi
+
+    # convert context to JSON format
+    IFS=',' read -ra LOG_CONTEXT_VARS <<< "$LOG_COMBINED_CONTEXTS_TXT"
+    local LOG_COMBINED_CONTEXTS_JSON='{}'
+    for LOG_CONTEXT_VAR in "${LOG_CONTEXT_VARS[@]}"; do
+        local LOG_CONTEXT_VAR_KEY
+        local LOG_CONTEXT_VAR_VALUE
+
+        LOG_CONTEXT_VAR_KEY=$(echo "$LOG_CONTEXT_VAR" | cut -d'=' -f1)
+        LOG_CONTEXT_VAR_VALUE=$(echo "$LOG_CONTEXT_VAR" | cut -d'=' -f2)
+
+        LOG_COMBINED_CONTEXTS_JSON=$(echo "$LOG_COMBINED_CONTEXTS_JSON" | \
+            jq  --monochrome-output \
+                --compact-output \
+                --raw-output \
+                --arg "$LOG_CONTEXT_VAR_KEY" "$LOG_CONTEXT_VAR_VALUE" \
+                ".$LOG_CONTEXT_VAR_KEY=\$$LOG_CONTEXT_VAR_KEY"
+        )
+    done
+
+    echo "$LOG_COMBINED_CONTEXTS_JSON"
+}
+
+####################################################################
+# Normalize the given message.
+# For now, it's a passthrough but might be used for future usage.
+# Globals:
+#   None
+# Arguments:
+#   Multiple positionnal arguments to be considered as the message.
+# Outputs:
+#   Writes the positional arguments as a string to STDOUT.
+####################################################################
+normalize_arg_message() {
+    echo "$@"
+}
+
+####################################################################
+# Builds the log in TEXT format.
+# Globals:
+#   None
+# Arguments:
+#   Formatted date time
+#   Normalized log level
+#   Message
+#   JSON context
+# Outputs:
+#   Writes the log message as TEXT to stdout
+####################################################################
+build_log_text() {
+    local -r LOG_DATE_TIME=$1
+    local -r LOG_LEVEL=$2
+    local -r LOG_MESSAGE=$3
+    local -r LOG_CONTEXT_AS_JSON=$4
+
+    # process ctx
+    local LOG_CONTEXT_AS_FMT
+    LOG_CONTEXT_AS_FMT=$(echo "$LOG_CONTEXT_AS_JSON" | jq -r 'to_entries | map("\(.key)=\(.value|tostring)") | join(" ")')
+
+    # execution
+    echo "$LOG_DATE_TIME $LOG_LEVEL [$LOG_CONTEXT_AS_FMT] - $LOG_MESSAGE"
+}
+
+####################################################################
+# Prints the log as TEXT.
+# Globals:
+#   None
+# Arguments:
+#   Formatted date time
+#   Normalized log level
+#   Message
+#   JSON context
+# Outputs:
+#   Writes the log message as TEXT to stdout
+#       (and stderr if level is ERROR)
+####################################################################
+print_log_text() {
+    local -r LOG_DATE_TIME=$1
+    local -r LOG_LEVEL=$2
+    local -r LOG_MESSAGE=$3
+    local -r LOG_CONTEXT_AS_JSON=$4
+
+    # generate text line
+    LOG_TEXT_LINE=$(build_log_text "$LOG_DATE_TIME" "$LOG_LEVEL" "$LOG_MESSAGE" "$LOG_CONTEXT_AS_JSON")
+
+    # execution
+    if [[ "$LOG_LEVEL" == "$WILO_LEVEL_ERROR_LABEL" ]]; then
+        print_stderr "$LOG_TEXT_LINE"
+    else
+        print_stdout "$LOG_TEXT_LINE"
+    fi
+}
+
+####################################################################
+# Prints the log as TEXT-COLORED.
+# Globals:
+#   None
+# Arguments:
+#   Formatted date time
+#   Normalized log level
+#   Message
+#   JSON context
+# Outputs:
+#   Writes the log message as TEXT-COLORED to stdout
+#       (and stderr if level is ERROR)
+####################################################################
+print_log_text_color() {
+    local -r LOG_DATE_TIME=$1
+    local -r LOG_LEVEL=$2
+    local -r LOG_MESSAGE=$3
+    local -r LOG_CONTEXT_AS_JSON=$4
+
+    # generate line without color
+    LOG_TEXT_LINE=$(build_log_text "$LOG_DATE_TIME" "$LOG_LEVEL" "$LOG_MESSAGE" "$LOG_CONTEXT_AS_JSON")
+
+    # get color
+    case $LOG_LEVEL in
+        "$WILO_LEVEL_TRACE_LABEL" )
+            LOG_START_COLOR="$WILO_LEVEL_TRACE_COLOR"
+            ;;
+        "$WILO_LEVEL_DEBUG_LABEL" )
+            LOG_START_COLOR="$WILO_LEVEL_DEBUG_COLOR"
+            ;;
+        "$WILO_LEVEL_INFO_LABEL" )
+            LOG_START_COLOR="$WILO_LEVEL_INFO_COLOR"
+            ;;
+        "$WILO_LEVEL_WARN_LABEL" )
+            LOG_START_COLOR="$WILO_LEVEL_WARN_COLOR"
+            ;;
+        "$WILO_LEVEL_ERROR_LABEL" )
+            LOG_START_COLOR="$WILO_LEVEL_ERROR_COLOR"
+            ;;
+        *)
+            print_stderr "error: unsupported value '$LOG_LEVEL' for variable 'LOG_LEVEL'."
+            exit 1
+            ;;
+    esac
+    LOG_END_COLOR="\033[0m"
+
+    # get line with color
+    LOG_TEXTCOLORED_LINE="$LOG_START_COLOR$LOG_TEXT_LINE$LOG_END_COLOR"
+
+    # execution
+    if [[ "$LOG_LEVEL" == "$WILO_LEVEL_ERROR_LABEL" ]]; then
+        print_stderr_esc "$LOG_TEXTCOLORED_LINE"
+    else
+        print_stdout_esc "$LOG_TEXTCOLORED_LINE"
+    fi
+}
+
+####################################################################
+# Prints the log as JSON.
+# Globals:
+#   None
+# Arguments:
+#   Formatted date time
+#   Normalized log level
+#   Message
+#   JSON context
+# Outputs:
+#   Writes the log message as JSON to stdout
+#       (and stderr if level is ERROR)
+####################################################################
+print_log_json() {
+    local -r LOG_DATE_TIME=$1
+    local -r LOG_LEVEL=$2
+    local -r LOG_MESSAGE=$3
+    local -r LOG_CONTEXT_AS_JSON=$4
+    
+    # execution
+    LOG_JSON_LINE=$(echo "{}" | \
+        jq  --monochrome-output \
+            --compact-output \
+            --raw-output \
+            --arg time "$LOG_DATE_TIME" \
+            --arg level "$LOG_LEVEL" \
+            --arg message "$LOG_MESSAGE" \
+            --argjson context "$LOG_CONTEXT_AS_JSON" \
+            "(.$WILO_JSON_TIME_KEY=\$time|.$WILO_JSON_LEVEL_KEY=\$level|.$WILO_JSON_MESSAGE_KEY=\$message) * \$context")
+
+    # execution
+    if [[ "$LOG_LEVEL" == "$WILO_LEVEL_ERROR_LABEL" ]]; then
+        print_stderr "$LOG_JSON_LINE"
+    else
+        print_stdout "$LOG_JSON_LINE"
+    fi
+}
+
+####################################################################
+# MAIN EXECUTION
+####################################################################
+main() {
+    POSITIONAL_ARGS=()
+
+    for COMMAND_ARGUMENT in "$@"; do
+        case $COMMAND_ARGUMENT in
+            --version)
+                echo "$WILO_BUILD_NAME $WILO_BUILD_VERSION ($WILO_BUILD_DATE_TIME)"
+                exit 0
+                ;;
+            -h|--help)
+                print_help
+                exit 0
+                ;;
+            --context=*)
+                LOCAL_CONTEXT="${COMMAND_ARGUMENT#*=}"
+                shift
+                ;;
+            --*|-*)
+                print_stderr "error: unknown option $COMMAND_ARGUMENT"
+                exit 1
+                ;;
+            *)
+                POSITIONAL_ARGS+=("$1")
+                shift
+                ;;
+        esac
+    done
+    
+    set -- "${POSITIONAL_ARGS[@]}"
+
+    if [ "$#" -lt 2 ]; then
+        print_help
+        exit 1
+    fi
+
+    # Date time
+    if ! DATE_TIME_NOW=$(normalize_date_time_now); then
+        print_stderr "error: unable to process date/time."
+        exit 1
+    fi
+
+    # Positional argument
+    if ! LEVEL=$(normalize_arg_level "$1"); then
+        print_stderr "error: unable to process log level."
+        exit 1
+    fi
+    shift
+    
+    # Message
+    if ! MESSAGE=$(normalize_arg_message "$@"); then
+        print_stderr "error: unable to process message."
+        exit 1
+    fi
+
+    # Options
+    if ! CONTEXT=$(normalize_arg_context "$LOCAL_CONTEXT"); then
+        print_stderr "error: unable to process context."
+        exit 1
+    fi
+
+    # Execute function
+    case $WILO_OUTPUT_TYPE in
+        # text printing
+        text | txt | TEXT | TXT )
+            print_log_text "$DATE_TIME_NOW" "$LEVEL" "$MESSAGE" "$CONTEXT"
+            ;;
+
+        # text-colored printing
+        textcolor | txtcolor | TEXTCOLOR | TXTCOLOR )
+            print_log_text_color "$DATE_TIME_NOW" "$LEVEL" "$MESSAGE" "$CONTEXT"
+            ;;
+
+        # json-printing
+        json | JSON)
+            print_log_json "$DATE_TIME_NOW" "$LEVEL" "$MESSAGE" "$CONTEXT"
+            ;;
+
+        *)
+            print_stderr "error: unsupported output type '$WILO_OUTPUT_TYPE'"
+            exit 1
+        ;;
+    esac
+}
+
+main "$@"
