@@ -11,9 +11,9 @@ It is written in Bash and has a single dependency: `jq`.
 ## Installation
 
 ```bash
-$ curl -fsSL https://github.com/julbme/wilo/releases/download/v1.0.0/wilo-1.0.0.tar.gz \
-    | tar xvzf - wilo
-$ sudo mv wilo /usr/local/bin/
+$ curl -fsSL https://github.com/julbme/wilo/releases/download/v1.0.1/wilo-1.0.1.tar.gz \
+    | tar xvzf - -C /tmp
+$ sudo mv /tmp/wilo-1.0.1/bin/wilo /usr/local/bin/
 $ wilo --version
 ```
 
@@ -35,6 +35,7 @@ $ export WILO_GLOBAL_CONTEXT="app=some-app,version=1.0.0"
 $ wilo info "A simple message with global context"
 $ wilo info "A simple message with global and cmd context" --context="step=3"
 ```
+
 will output the following:
 
 ```
@@ -79,8 +80,9 @@ will output the following:
 
 ## Advanced configuration
 
-| Environment var         | Description                                                              | Default      |
-| ----------------------- | ------------------------------------------------------------------------ | ------------ |
+|     Environment var     |                               Description                                |   Default    |
+|-------------------------|--------------------------------------------------------------------------|--------------|
 | `WILO_OUTPUT_TYPE`      | Format of the log: `text`, `textcolor`, `json`.                          | `text`       |
 | `WILO_DATE_TIME_FORMAT` | Date/time format: `iso8601utc`, `iso8601`, `ts`, `ts_milli`, `ts_micro`. | `iso8601utc` |
 | `WILO_GLOBAL_CONTEXT`   | Context to add to all the logs: `key1=value1,key2=value2`.               | ``           |
+

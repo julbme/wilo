@@ -4,7 +4,6 @@
     xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.1.0 http://maven.apache.org/xsd/assembly-2.1.0.xsd"
 >
 	<id>main</id>
-	<includeBaseDirectory>false</includeBaseDirectory>
 	<formats>
 		<format>zip</format>
 		<format>tar</format>
@@ -22,6 +21,11 @@
 		<fileSet>
 			<directory>${project.basedir}/src/main/dist</directory>
 			<outputDirectory>/</outputDirectory>
+		</fileSet>
+		<fileSet>
+			<directory>${project.basedir}/src/main/scripts</directory>
+			<outputDirectory>/bin</outputDirectory>
+			<filtered>true</filtered>
 		</fileSet>
 	</fileSets>
 </assembly>
