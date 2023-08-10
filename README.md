@@ -1,19 +1,27 @@
 # wilo
 
-Wilo is a utility for logging in Bash scripts.
+Wilo is a utility for structured logging in Bash scripts.
 
 Nowadays, all logs are from all systems are collected and forwarded to a centralized location.
-For Bash scripts, it always require custom code to generate formatted logs in text or JSON.
+For Bash scripts, it always require custom code to generate structured logs in text or JSON.
 
-__Wilo__ offers a very simple command line interface which will provide formatted logging out-of-the-box.
+__Wilo__ offers a very simple command line interface which will provide structured logging out-of-the-box.
 It is written in Bash and has a single dependency: `jq`.
 
 ## Installation
 
+### Using Homebrew
+
+`brew install julbme/tap/wilo`
+
+Or `brew tap julbme/tap` and then `brew install wilo`.
+
+### Using Curl
+
 ```bash
-$ curl -fsSL https://github.com/julbme/wilo/releases/download/v1.0.1/wilo-1.0.1.tar.gz \
+$ curl -fsSL https://github.com/julbme/wilo/releases/download/v1.0.2/wilo-1.0.2.tar.gz \
     | tar xvzf - -C /tmp
-$ sudo mv /tmp/wilo-1.0.1/bin/wilo /usr/local/bin/
+$ sudo mv /tmp/wilo-1.0.2/bin/wilo /usr/local/bin/
 $ wilo --version
 ```
 

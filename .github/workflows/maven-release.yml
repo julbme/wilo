@@ -71,6 +71,7 @@ jobs:
           ./mvnw -B jreleaser:full-release -Djreleaser.dry.run=true
         env:
           JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JRELEASER_HOMEBREW_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
           JRELEASER_COSIGN_PRIVATE_KEY: ${{ secrets.OSS_BINARIES_COSIGN_PRIVATE_KEY }}
           JRELEASER_COSIGN_PUBLIC_KEY: ${{ secrets.OSS_BINARIES_COSIGN_PUBLIC_KEY }}
           JRELEASER_COSIGN_PASSWORD: ${{ secrets.OSS_BINARIES_COSIGN_PASSWORD }}
@@ -98,6 +99,7 @@ jobs:
           ./mvnw -B jreleaser:full-release
         env:
           JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JRELEASER_HOMEBREW_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
           JRELEASER_COSIGN_PRIVATE_KEY: ${{ secrets.OSS_BINARIES_COSIGN_PRIVATE_KEY }}
           JRELEASER_COSIGN_PUBLIC_KEY: ${{ secrets.OSS_BINARIES_COSIGN_PUBLIC_KEY }}
           JRELEASER_COSIGN_PASSWORD: ${{ secrets.OSS_BINARIES_COSIGN_PASSWORD }}

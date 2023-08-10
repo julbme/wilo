@@ -14,13 +14,13 @@
 	</formats>
 	<fileSets>
 		<fileSet>
+			<directory>${project.basedir}/src/main/dist</directory>
+			<outputDirectory>/</outputDirectory>
+		</fileSet>
+		<fileSet>
 			<directory>${project.basedir}/src/main/resources</directory>
 			<outputDirectory>/</outputDirectory>
 			<filtered>true</filtered>
-		</fileSet>
-		<fileSet>
-			<directory>${project.basedir}/src/main/dist</directory>
-			<outputDirectory>/</outputDirectory>
 		</fileSet>
 		<fileSet>
 			<directory>${project.basedir}/src/main/scripts</directory>
@@ -28,4 +28,10 @@
 			<filtered>true</filtered>
 		</fileSet>
 	</fileSets>
+	<files>
+        <file>
+            <source>${project.basedir}/LICENSE</source>
+            <outputDirectory>/</outputDirectory>
+        </file>
+    </files>
 </assembly>
