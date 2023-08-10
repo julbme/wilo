@@ -3,7 +3,6 @@ class {{brewFormulaName}} < Formula
   desc "{{projectDescription}}"
   homepage "{{projectLinkHomepage}}"
   url "{{distributionUrl}}"
-  version "{{projectVersion}}"
   sha256 "{{distributionChecksumSha256}}"
   license "{{projectLicense}}"
 
@@ -25,6 +24,6 @@ class {{brewFormulaName}} < Formula
 
   test do
     output = shell_output("#{bin}/{{distributionExecutableName}} --version")
-    assert_match /^{{projectName}} {{projectVersion}} /, output
+    assert_match "/^{{projectName}} {{projectVersion}} /", output
   end
 end

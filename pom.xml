@@ -13,14 +13,14 @@
 	<packaging>pom</packaging>
 
 	<name>Julb.me :: Wilo</name>
-	<description>This project provides a logging utility for Bash scripts.</description>
+	<description>This project provides a logging utility for Bash scripts</description>
 
 	<url>https://julbme.github.io/wilo/</url>
 
 	<licenses>
 		<license>
-			<name>MIT License</name>
-			<url>http://www.opensource.org/licenses/mit-license.php</url>
+			<name>MIT</name>
+			<url>https://spdx.org/licenses/MIT.html</url>
 			<distribution>repo</distribution>
 		</license>
 	</licenses>
