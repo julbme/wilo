@@ -31,6 +31,8 @@ distributions:
       - path: target/{{ projectName }}-{{ projectVersion }}.zip
         extraProperties:
           universal: true
+      - path: target/{{ projectName }}-{{ projectVersion }}.noarch.rpm
+      - path: target/{{ projectName }}-{{ projectVersion }}.src.rpm
     brew:
       active: RELEASE
       dependencies:
