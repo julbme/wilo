@@ -17,6 +17,12 @@ signing:
 #    active: RELEASE
 #    status: "🚀 Wilo {{projectVersion}} has been released! {{releaseNotesUrl}}"
 
+files:
+  active: RELEASE
+  artifacts:
+    - path: target/{{ projectName }}-{{ projectVersion }}-1.noarch.rpm
+    - path: target/{{ projectName }}-{{ projectVersion }}-1.src.rpm
+
 distributions:
   wilo:
     active: RELEASE
@@ -31,8 +37,6 @@ distributions:
       - path: target/{{ projectName }}-{{ projectVersion }}.zip
         extraProperties:
           universal: true
-      - path: target/{{ projectName }}-{{ projectVersion }}.noarch.rpm
-      - path: target/{{ projectName }}-{{ projectVersion }}.src.rpm
     brew:
       active: RELEASE
       dependencies:

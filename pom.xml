@@ -45,7 +45,7 @@
 	</distributionManagement>
 
 	<properties>
-		<j3.var.rpmReleaseVersion>${j3.var.buildTimestamp}</j3.var.rpmReleaseVersion>
+		<j3.var.rpmReleaseVersion>1</j3.var.rpmReleaseVersion>
 		<j3.var.rpmVersion>${j3.var.releaseVersion}</j3.var.rpmVersion>
 		<sonar.projectKey>julbme_wilo</sonar.projectKey>
 	</properties>
